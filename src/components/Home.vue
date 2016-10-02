@@ -13,7 +13,11 @@
     .message-container
       .message-wrapper(v-for="msg of conversations_current", :class="[msg.is_from_me ? 'sent' : 'recieved']")
         .message(@click="log(msg)")
-          span {{msg.text}}
+          span(v-if="!msg.cache_has_attachments") {{msg.text}}
+          template(v-else)
+            .audio-container(v-if="msg.is_audio_message")
+              button(@click="playAudio(attachments[msg.ROWID].filename)") Play Audio
+            img(v-else :src="attachments[msg.ROWID].filename")
         //- .message-time
         //-   span {{msg.date_sent}}
         .message-read
@@ -25,6 +29,7 @@
 <script>
 import Server from '../server.js'
 import Vue from 'vue'
+import {fetchBlob, playAmrBlob} from '../helpers/amr.js'
 
 class MSG {
   constructor (text) {
@@ -42,9 +47,12 @@ class MSG {
 export default {
   data () {
     return {
+      // Load from config
+      server_address: 'http://192.168.0.10:44055',
       server: new Server('http://192.168.0.10', this, 44055, 'api'),
       msg: 'Hello World22!222',
       test: '',
+      attachments: {},
       chats: [],
       conversations: [],
       conversations_current: [],
@@ -53,10 +61,17 @@ export default {
     }
   },
   mounted () {
-    let vm = this
+    // INIT
+    this.server.getAttachments().then(data => {
+      this.attachments = data.reduce((map, obj) => {
+        obj.filename = `${this.server_address}${obj.filename}`
+        map[obj.message_id] = obj
+        return map
+      }, {})
+    })
     this.server.getChats().then(data => {
-      vm.chats = data
-      this.loadMessage(data[0].ROWID)
+      this.chats = data
+      this.loadMessage(data[0].chat_identifier, data[0].ROWID)
     })
     this.messagesContainer = document.querySelector('.message-container')
   },
@@ -77,6 +92,11 @@ export default {
       this.conversations_current.push(msg)
       evt.target.value = ''
       this.focus()
+    },
+    playAudio (file) {
+      fetchBlob(file, (blob) => {
+        playAmrBlob(blob)
+      })
     },
     focus () {
       // Scroll conversations to bottom on data change
@@ -111,13 +131,14 @@ export default {
   
   .chat
     display flex
-    // justify-content center
+    justify-content flex-start
+    align-items center
     padding .5em 1em .5em 1em
     // border 1px solid grey
     border-bottom .5px solid grey
     height 100px
     .chat-avatar
-      align-self flex-start
+      align-self center
       border-radius 25px
       width 50px
       height 50px
@@ -129,7 +150,7 @@ export default {
       align-items flex-start
 
       height 100%
-      width 66%
+      width 80%
       p
         white-space nowrap
         overflow hidden
@@ -165,6 +186,12 @@ export default {
   .message
     padding 1em
     border-radius 1em
+    img
+      max-width 100%
+    .audio-container
+      width 100%
+      height 100%
+      display flex
   .sent
     align-self flex-end
     .message
