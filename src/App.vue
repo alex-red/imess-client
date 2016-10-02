@@ -13,11 +13,7 @@ export default {
 </script>
 
 <style lang="stylus">
-html {
-  height: 100%;
-}
-
-body {
-  height: 100%;
-}
+html, body
+  height 100%
+  overflow hidden
 </style>

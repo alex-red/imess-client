@@ -1,50 +1,84 @@
 <template lang="pug">
 .home-container
-  .welcome
-    h1 Messages
-  .content-container.mdl-grid.mdl-layout
-    .chats.mdl-cell.mdl-cell--4-col
-      .chat(v-for="chat of chats")
-        a(href="#" @click="loadMessage(chat.ROWID)"): span {{chat.chat_identifier}}
-    .conversations.mdl-cell.mdl-cell--8-col
-      .message(v-for="msg of conversations_current", :class="[msg.is_from_me ? 'sent' : 'recieved']")
-        span(@click="log(msg)") {{msg.text}}
-      .new.mdl-cell.mdl-cell--8-col
-        input#new-msg(type="text" placeholder="iMessage")
-        //- label(for="new-msg") Text
+  //- .welcome
+  //-   h1 Messages
+  .chats
+    .chat(v-for="chat of chats")
+      a(href="#" @click="loadMessage(chat.chat_identifier, chat.ROWID)"): span {{chat.chat_identifier}}
+  .conversations
+    .message-container
+      .message-wrapper(v-for="msg of conversations_current", :class="[msg.is_from_me ? 'sent' : 'recieved']")
+        .message(@click="log(msg)")
+          span {{msg.text}}
+        //- .message-time
+        //-   span {{msg.date_sent}}
+        .message-read
+    .new
+      input#new-msg(@keyup.enter="newMessage" type="text" placeholder="iMessage")
+      //- label(for="new-msg") Text
 </template>
 
 <script>
 import Server from '../server.js'
 import Vue from 'vue'
 
+class MSG {
+  constructor (text) {
+    this.text = text
+    this.is_from_me = 1
+    this.date_sent = new Date()
+    this.date_read = new Date()
+    this.is_sent = 0
+    this.is_read = 0
+    this.is_delivered = 0
+    this.is_finished = 0
+  }
+}
+
 export default {
   data () {
     return {
       server: new Server('http://192.168.0.10', this, 44055, 'api'),
       msg: 'Hello World22!222',
+      test: '',
       chats: [],
       conversations: [],
-      conversations_current: []
+      conversations_current: [],
+      coversations_current_target: '',
+      messagesContainer: null
     }
   },
   mounted () {
     let vm = this
     this.server.getChats().then(data => {
       vm.chats = data
+      this.loadMessage(data[0].ROWID)
     })
+    this.messagesContainer = document.querySelector('.message-container')
   },
   methods: {
-    loadMessage (chatId) {
+    loadMessage (chatTarget, chatId) {
       this.server.getMessages(chatId).then(data => {
         this.conversations_current = data
-        Vue.nextTick(() => this.focus())
+        this.conversations_current_target = chatTarget
+        this.focus()
       })
+    },
+    newMessage (evt) {
+      if (!evt.target.value) return false
+      this.server.postMessage(this.conversations_current_target, evt.target.value).then((resp) => {
+        console.log(resp)
+      })
+      const msg = new MSG(evt.target.value)
+      this.conversations_current.push(msg)
+      evt.target.value = ''
+      this.focus()
     },
     focus () {
       // Scroll conversations to bottom on data change
-      const container = document.querySelector('.conversations')
-      container.scrollTop = container.scrollHeight
+      Vue.nextTick(() => {
+        this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight
+      })
     },
     log (msg) {
       console.log(msg)
@@ -58,62 +92,77 @@ export default {
 .home-container
   display flex
   height 100%
-  flex-direction column
-  justify-content center
-  align-items center
+  width 100%
+  flex-direction row
   
-.content-container
-  display flex
-  padding 0
 .chats
+  height 100%
   display flex
-  flex-direction column
-  font-size 24px
   overflow-y auto
+  align-self flex-start
+  flex-direction column
+  font-size 20px
+  width 33%
   .chat
     display flex
     align-items center
     justify-content center
-    border 1px solid grey
-    height 100px
-.conversations
-  display flex
-  overflow-y auto
-  flex-direction column
-  padding 1em
-  margin-bottom 51px
-  border 1px solid grey
-  .message
-    border-radius 1em
-    min-width 10%
-    max-width 66%
     padding 1em
+    // border 1px solid grey
+    border-bottom .5px solid grey
+    height 100px
+    
+.conversations
+  overflow-y auto
+  display flex
+  width 100%
+  height 100%
+  flex-direction column
+  // padding 1em
+  border 1px solid grey
+  .message-container
+    padding 1em
+    flex 1 1 100%
+    display flex
+    flex-direction column
+    overflow auto
+  .message-wrapper
+    max-width 66%
+    flex-direction row
     margin-bottom 1em
-    &.sent
-      align-self flex-end
+  .message-time, .message-read
+    padding 0 .5em 0 .5em
+    float right
+  .message
+    padding 1em
+    border-radius 1em
+  .sent
+    align-self flex-end
+    .message
       background-color #007AFF
       color white
-    &.recieved
+  .recieved
+    align-self flex-start
+    .message
       background-color #F7F7F7
-      align-self flex-start
       color black
+    .message-time
+      order -1
+      float left
+      
   .new
-    position absolute
     display flex
+    flex 0 0 50px
+    padding 0 1em 0 1em
     justify-content center
     align-items center
-    border 1px solid grey
     bottom 0
-    margin-left -15px
-    padding-left 1em
-    padding-right 1em
-    height 50px
     background-color #F7F7F7
     input
       width 100%
       border-radius 1em
+      padding 0 .5em 0 .5em
       outline none
-      padding 5px
 a
   color black
   text-decoration none

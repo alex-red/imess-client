@@ -4,8 +4,8 @@ export default class Server {
     this.http = Vue.$http
   }
 
-  getChats () {
-    return this.http.get(this.url).then((resp) => {
+  GET (endpoint) {
+    return this.http.get(this.url + `${endpoint}`).then((resp) => {
       return resp.data
     }, (resp) => {
       console.log(`Error! ${resp}`)
@@ -13,12 +13,23 @@ export default class Server {
     })
   }
 
-  getMessages (chatId) {
-    return this.http.get(this.url + `/messages/${chatId}`).then((resp) => {
+  POST (endpoint) {
+    return this.http.post(this.url + `${endpoint}`).then((resp) => {
       return resp.data
     }, (resp) => {
       console.log(`Error! ${resp}`)
       return null
     })
   }
+
+  getChats () { return this.GET('/chats') }
+
+  getAttachments () { return this.GET('/attachments') }
+
+  getMessages (chatId) { return this.GET(`/messages/${chatId}`) }
+
+  postMessage (personId, msg) {
+    return this.POST(`/message/${personId}/${msg}`)
+  }
+
 }

@@ -1,7 +1,7 @@
 # iMessage Client
 >For iMess Server (Custom iMessage Backend)
 
-A iMessage Client to fully interact with iMessage anywhere. Built using VueJs.
+An iMessage Client to fully interact with iMessage anywhere. Built using VueJs.
 
 ## Build Setup
 
