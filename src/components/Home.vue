@@ -4,11 +4,7 @@
   //-   h1 Messages
   .chats
     .chat(v-for="chat of chats")
-      .chat-avatar
-        i.material-icons account_circle
-      .chat-name
-        p: a(href="#" @click="loadMessage(chat.chat_identifier, chat.ROWID)") {{chat.chat_identifier}}
-      .chat-time
+      a(href="#" @click="loadMessage(chat.chat_identifier, chat.ROWID)"): span {{chat.chat_identifier}}
   .conversations
     .message-container
       .message-wrapper(v-for="msg of conversations_current", :class="[msg.is_from_me ? 'sent' : 'recieved']")
@@ -56,7 +52,7 @@ export default {
     let vm = this
     this.server.getChats().then(data => {
       vm.chats = data
-      this.loadMessage(data[0].ROWID)
+      this.loadMessage(data[0].chat_identifier, data[0].ROWID)
     })
     this.messagesContainer = document.querySelector('.message-container')
   },
@@ -103,40 +99,18 @@ export default {
   height 100%
   display flex
   overflow-y auto
-  overflow-x hidden
+  align-self flex-start
   flex-direction column
-  background-color #F7F7F7
-  // font-size 20px
+  font-size 20px
   width 33%
-  
   .chat
     display flex
-    // justify-content center
-    padding .5em 1em .5em 1em
+    align-items center
+    justify-content center
+    padding 1em
     // border 1px solid grey
     border-bottom .5px solid grey
     height 100px
-    .chat-avatar
-      align-self flex-start
-      border-radius 25px
-      width 50px
-      height 50px
-      background-color #C7C7CC
-      i
-        font-size 50px
-    .chat-name
-      display flex
-      align-items flex-start
-
-      height 100%
-      width 66%
-      p
-        white-space nowrap
-        overflow hidden
-        padding-left .5em
-        text-overflow ellipsis !important
-        a
-          font-weight 600
     
 .conversations
   overflow-y auto
@@ -145,11 +119,8 @@ export default {
   height 100%
   flex-direction column
   // padding 1em
-  // border-left 1px solid grey
-  -webkit-box-shadow 2px 0px 2px 2px #888
-  box-shadow 2px 0px 2px 2px #888
+  border 1px solid grey
   .message-container
-    overflow-x hidden !important
     padding 1em
     flex 1 1 100%
     display flex
@@ -173,7 +144,7 @@ export default {
   .recieved
     align-self flex-start
     .message
-      background-color #E5E5EA
+      background-color #F7F7F7
       color black
     .message-time
       order -1
@@ -182,16 +153,14 @@ export default {
   .new
     display flex
     flex 0 0 50px
-    padding .5em 4em .5em .5em
+    padding 0 1em 0 1em
     justify-content center
     align-items center
     bottom 0
     background-color #F7F7F7
     input
       width 100%
-      height 90%
-      font-size 16px
-      // border-radius 1em
+      border-radius 1em
       padding 0 .5em 0 .5em
       outline none
 a

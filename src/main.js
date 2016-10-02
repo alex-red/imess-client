@@ -6,7 +6,7 @@ import '../node_modules/material-design-lite/material.min.js'
 Vue.use(require('vue-resource'))
 
 /* eslint-disable no-new */
-const vm = new Vue({
+let vm = new Vue({
   el: '#app',
   render: h => h(App)
 })
