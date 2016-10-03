@@ -1,7 +1,5 @@
 <template lang="pug">
 .home-container
-  //- .welcome
-  //-   h1 Messages
   .chats
     .chat(v-for="chat of chats")
       .chat-avatar
@@ -13,11 +11,13 @@
     .message-container
       .message-wrapper(v-for="msg of conversations_current", :class="[msg.is_from_me ? 'sent' : 'recieved']")
         .message(@click="log(msg)")
-          span(v-if="!msg.cache_has_attachments") {{msg.text}}
-          template(v-else)
+          p(v-if="!msg.cache_has_attachments") {{msg.text}}
+          .attachments(v-else)
             .audio-container(v-if="msg.is_audio_message")
-              button(@click="playAudio(attachments[msg.ROWID].filename)") Play Audio
-            img(v-else :src="attachments[msg.ROWID].filename")
+              player(:url = "attachments[msg.ROWID].filename", :audiocontext="audiocontext")
+            video(v-if="attachments[msg.ROWID].mime_type.includes('video')" controls preload)
+              source(:src="attachments[msg.ROWID].filename")
+            img(v-if="attachments[msg.ROWID].mime_type.includes('image')", :src="attachments[msg.ROWID].filename")
         //- .message-time
         //-   span {{msg.date_sent}}
         .message-read
@@ -29,7 +29,7 @@
 <script>
 import Server from '../server.js'
 import Vue from 'vue'
-import {fetchBlob, playAmrBlob} from '../helpers/amr.js'
+import Player from './Player'
 
 class MSG {
   constructor (text) {
@@ -45,6 +45,9 @@ class MSG {
 }
 
 export default {
+  components: {
+    Player
+  },
   data () {
     return {
       // Load from config
@@ -56,31 +59,52 @@ export default {
       chats: [],
       conversations: [],
       conversations_current: [],
-      coversations_current_target: '',
-      messagesContainer: null
+      conversations_current_target: null,
+      conversations_current_chatId: null,
+      messagesContainer: null,
+      refreshTimer: null,
+      audiocontext: new (window.AudioContext || webkitAudioContext)()
     }
   },
   mounted () {
     // INIT
-    this.server.getAttachments().then(data => {
-      this.attachments = data.reduce((map, obj) => {
-        obj.filename = `${this.server_address}${obj.filename}`
-        map[obj.message_id] = obj
-        return map
-      }, {})
-    })
-    this.server.getChats().then(data => {
-      this.chats = data
-      this.loadMessage(data[0].chat_identifier, data[0].ROWID)
-    })
+    this.load()
     this.messagesContainer = document.querySelector('.message-container')
+    // Vue.nextTick(() => {
+    //   this.loadMessage(this.chats[0].chat_identifier, this.chats[0].ROWID)
+    // })
+    // Start our update/refresh loop
+    this.refreshTimer = window.setInterval(this.refresh, 1000)
+  },
+  beforeDestroy () {
+    window.clearInterval(this.refreshTimer)
   },
   methods: {
+    load () {
+      this.server.getAttachments().then(data => {
+        this.attachments = data.reduce((map, obj) => {
+          obj.filename = `${this.server_address}${obj.filename}`
+          map[obj.message_id] = obj
+          return map
+        }, {})
+      })
+      this.server.getChats().then(data => {
+        this.chats = data
+      })
+      if (this.conversations_current_target) {
+        this.loadMessage(this.conversations_current_target, this.conversations_current_chatId)
+      }
+    },
     loadMessage (chatTarget, chatId) {
-      this.server.getMessages(chatId).then(data => {
-        this.conversations_current = data
+      if (this.conversations_current_target !== chatTarget) {
         this.conversations_current_target = chatTarget
-        this.focus()
+        this.conversations_current_chatId = chatId
+      }
+      this.server.getMessages(chatId).then(data => {
+        if (this.conversations_current.length !== data.length) {
+          this.conversations_current = data
+          this.focus()
+        }
       })
     },
     newMessage (evt) {
@@ -93,19 +117,28 @@ export default {
       evt.target.value = ''
       this.focus()
     },
-    playAudio (file) {
-      fetchBlob(file, (blob) => {
-        playAmrBlob(blob)
-      })
-    },
     focus () {
       // Scroll conversations to bottom on data change
       Vue.nextTick(() => {
         this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight
       })
+      // Ensure we scroll to bottom after attachments load
+      // TODO: Make this more accurate...
+      window.setTimeout(() => {
+        Vue.nextTick(() => {
+          this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight
+        })
+      }, 500)
+    },
+    attachmentHandler () {
+      console.log('test')
     },
     log (msg) {
       console.log(msg)
+    },
+    refresh () {
+      // Refresh code goes here
+      this.load()
     }
   }
 }
@@ -184,14 +217,25 @@ export default {
     padding 0 .5em 0 .5em
     float right
   .message
-    padding 1em
+    overflow-wrap break-word
+    // padding 1em
     border-radius 1em
-    img
-      max-width 100%
-    .audio-container
-      width 100%
-      height 100%
-      display flex
+    p
+      padding 1em
+      margin 0
+    .attachments
+      video
+        width 100%
+        height 100%
+        border 1px solid grey
+      img
+        padding 0
+        max-width 100%
+      .audio-container
+        width 100%
+        height 100%
+        display flex
+    
   .sent
     align-self flex-end
     .message
