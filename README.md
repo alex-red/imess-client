@@ -1,5 +1,5 @@
 # iMessage Client
->For iMess Server (Custom iMessage Backend)
+## For use with [iMess Server](https://github.com/alex-red/imess)
 
 An iMessage Client to fully interact with iMessage anywhere. Built using VueJs.
 
